@@ -1,24 +1,19 @@
 import React, { Component } from "react";
 import Posts from "./posts";
-import Pagination from "./pagination";
 
 class Favourite extends Component {
   state = {
     posts: [],
-    currentPage: 1,
+    start: 0,
     postsPerPage: 10,
     totalPost: 0,
-    loading: false
+    hasMore: true
   };
 
   componentDidMount() {
     const fetchFavouritePosts = async () => {
-      this.setState({
-        loading: true
-      });
-
       const posts = await fetch(
-        `http://localhost:3003/posts?isFavourite=true&_page=${this.state.currentPage}&_limit=${this.state.postsPerPage}`
+        `http://localhost:3003/posts?isFavourite=true&_start=${this.state.start}&_limit=${this.state.postsPerPage}`
       )
         .then(response => {
           this.setState({
@@ -32,8 +27,7 @@ class Favourite extends Component {
         });
       if (posts) {
         this.setState({
-          posts: posts,
-          loading: false
+          posts: posts
         });
       }
     };
@@ -41,25 +35,23 @@ class Favourite extends Component {
   }
 
   render() {
-    const paginate = async pageNumber => {
-      await this.setState({ currentPage: pageNumber });
-      updateFavouritePostsData();
-    };
-
     const updateFavouritePostsData = async () => {
-      this.setState({
-        loading: true
+      await this.setState({
+        start: this.state.start + this.state.postsPerPage
       });
 
-      const updatedFavouritePosts = await fetch(
-        `http://localhost:3003/posts?isFavourite=true&_page=${this.state.currentPage}&_limit=${this.state.postsPerPage}`
-      ).then(response => response.json());
+      if (this.state.start < this.state.totalPost) {
+        const updatedFavouritePosts = await fetch(
+          `http://localhost:3003/posts?isFavourite=true&_start=${this.state.start}&_limit=${this.state.postsPerPage}`
+        ).then(response => response.json());
 
-      this.setState({
-        posts: updatedFavouritePosts,
-        loading: false
-      });
-      console.log(this.state);
+        this.setState({
+          posts: this.state.posts.concat(updatedFavouritePosts)
+        });
+        console.log(this.state);
+      } else {
+        this.setState({ hasMore: false });
+      }
     };
 
     const patchPostsData = async (id, isFav) => {
@@ -74,20 +66,28 @@ class Favourite extends Component {
       })
         .then(response => response.json())
         .then(json => console.log(json));
-      updateFavouritePostsData();
+      resetFavouritePostsData();
+    };
+
+    const resetFavouritePostsData = async () => {
+      const resetedFavouritePosts = await fetch(
+        `http://localhost:3003/posts?isFavourite=true&_start=0&_limit=${this
+          .state.start + this.state.postsPerPage}`
+      ).then(response => response.json());
+
+      this.setState({
+        posts: resetedFavouritePosts
+      });
+      console.log(this.state);
     };
 
     return (
-      <div>
+      <div style={{ padding: "3em 2em" }}>
         <Posts
           posts={this.state.posts}
-          loading={this.state.loading}
           toggle={patchPostsData}
-        />
-        <Pagination
-          postsPerPage={this.state.postsPerPage}
-          totalPosts={this.state.totalPost}
-          paginate={paginate}
+          fetchData={updateFavouritePostsData}
+          hasMore={this.state.hasMore}
         />
       </div>
     );

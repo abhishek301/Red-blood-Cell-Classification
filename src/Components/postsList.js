@@ -1,24 +1,19 @@
 import React, { Component } from "react";
 import Posts from "./posts";
-import Pagination from "./pagination";
 
 class PostsList extends Component {
   state = {
     posts: [],
-    currentPage: 1,
+    start: 0,
     postsPerPage: 10,
     totalPost: 0,
-    loading: false
+    hasMore: true
   };
 
   componentDidMount() {
     const fetchPostsData = async () => {
-      this.setState({
-        loading: true
-      });
-
       const posts = await fetch(
-        `http://localhost:3003/posts?_page=${this.state.currentPage}&_limit=${this.state.postsPerPage}`
+        `http://localhost:3003/posts?_start=${this.state.start}&_limit=${this.state.postsPerPage}`
       )
         .then(response => {
           this.setState({
@@ -32,8 +27,7 @@ class PostsList extends Component {
         });
       if (posts) {
         this.setState({
-          posts: posts,
-          loading: false
+          posts: posts
         });
       }
     };
@@ -41,25 +35,23 @@ class PostsList extends Component {
   }
 
   render() {
-    const paginate = async pageNumber => {
-      await this.setState({ currentPage: pageNumber });
-      updatePostsData();
-    };
-
     const updatePostsData = async () => {
-      this.setState({
-        loading: true
+      await this.setState({
+        start: this.state.start + this.state.postsPerPage
       });
 
-      const updatedPosts = await fetch(
-        `http://localhost:3003/posts?_page=${this.state.currentPage}&_limit=${this.state.postsPerPage}`
-      ).then(response => response.json());
+      if (this.state.start < this.state.totalPost) {
+        const updatedPosts = await fetch(
+          `http://localhost:3003/posts?_start=${this.state.start}&_limit=${this.state.postsPerPage}`
+        ).then(response => response.json());
 
-      this.setState({
-        posts: updatedPosts,
-        loading: false
-      });
-      console.log(this.state);
+        this.setState({
+          posts: this.state.posts.concat(updatedPosts)
+        });
+        console.log(this.state);
+      } else {
+        this.setState({ hasMore: false });
+      }
     };
 
     const patchPostsData = (id, isFav) => {
@@ -77,16 +69,12 @@ class PostsList extends Component {
     };
 
     return (
-      <div>
+      <div style={{ padding: "3em 2em" }}>
         <Posts
           posts={this.state.posts}
-          loading={this.state.loading}
           toggle={patchPostsData}
-        />
-        <Pagination
-          postsPerPage={this.state.postsPerPage}
-          totalPosts={this.state.totalPost}
-          paginate={paginate}
+          fetchData={updatePostsData}
+          hasMore={this.state.hasMore}
         />
       </div>
     );
