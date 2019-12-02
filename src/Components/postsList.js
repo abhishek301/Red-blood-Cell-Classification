@@ -1,5 +1,11 @@
 import React, { Component } from "react";
 import Posts from "./posts";
+import { connect } from "react-redux";
+import {
+  fetchPostsData,
+  updatePostsData,
+  patchPostsData
+} from "./../actions/postAction";
 
 class PostsList extends Component {
   state = {
@@ -11,74 +17,36 @@ class PostsList extends Component {
   };
 
   componentDidMount() {
-    const fetchPostsData = async () => {
-      const posts = await fetch(
-        `http://localhost:3003/posts?_start=${this.state.start}&_limit=${this.state.postsPerPage}`
-      )
-        .then(response => {
-          this.setState({
-            totalPost: response.headers.get("X-Total-Count")
-          });
-
-          return response.json();
-        })
-        .catch(function(e) {
-          console.log(e);
-        });
-      if (posts) {
-        this.setState({
-          posts: posts
-        });
-      }
-    };
-    fetchPostsData();
+    this.props.dispatch(fetchPostsData());
   }
 
   render() {
-    const updatePostsData = async () => {
-      await this.setState({
-        start: this.state.start + this.state.postsPerPage
-      });
-
-      if (this.state.start < this.state.totalPost) {
-        const updatedPosts = await fetch(
-          `http://localhost:3003/posts?_start=${this.state.start}&_limit=${this.state.postsPerPage}`
-        ).then(response => response.json());
-
-        this.setState({
-          posts: this.state.posts.concat(updatedPosts)
-        });
-        console.log(this.state);
-      } else {
-        this.setState({ hasMore: false });
-      }
+    const updatePosts = () => {
+      this.props.dispatch(updatePostsData());
     };
+    console.log(this.props.data);
 
-    const patchPostsData = (id, isFav) => {
-      fetch(`http://localhost:3003/posts/${id}`, {
-        method: "PATCH",
-        body: JSON.stringify({
-          isFavourite: !isFav
-        }),
-        headers: {
-          "Content-type": "application/json; charset=UTF-8"
-        }
-      })
-        .then(response => response.json())
-        .then(json => console.log(json));
+    const patchPosts = (id, isFav) => {
+      this.props.dispatch(patchPostsData(id, isFav));
     };
 
     return (
       <div style={{ padding: "3em 2em" }}>
         <Posts
-          posts={this.state.posts}
-          toggle={patchPostsData}
-          fetchData={updatePostsData}
-          hasMore={this.state.hasMore}
+          posts={this.props.data.posts}
+          toggle={patchPosts}
+          fetchData={updatePosts}
+          hasMore={this.props.data.hasMore}
         />
       </div>
     );
   }
 }
 
-export default PostsList;
+const mapStateToProps = state => {
+  return {
+    data: state
+  };
+};
+
+export default connect(mapStateToProps)(PostsList);
